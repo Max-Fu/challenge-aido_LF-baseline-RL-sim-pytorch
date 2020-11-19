@@ -115,3 +115,5 @@ log.txt
 requirements.resolved
 
 .vscode
+pytorch_models
+results

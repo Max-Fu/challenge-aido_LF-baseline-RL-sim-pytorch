@@ -96,7 +96,10 @@ def train(args):
             if timesteps_since_eval >= args.eval_freq:
                 timesteps_since_eval %= args.eval_freq
                 evaluations.append(evaluate_policy(env, policy))
-
+                print("rewards at time {}: {}".format(total_timesteps, evaluations[-1]))
+                # Write rewards to tensorboard 
+                writer.add_scalar('rewards', evaluations[-1], total_timesteps)
+                print("Saving tensorboard log to {}".format(results_folder_path))
                 if args.save_models:
                     policy.save(file_name, directory=model_folder_path)
                     print("Model saved to " + model_folder_path)
