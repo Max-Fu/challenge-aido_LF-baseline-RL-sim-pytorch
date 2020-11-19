@@ -26,7 +26,7 @@ def get_args_train():
     parser.add_argument("--model-dir", type=str, default="pytorch_models")
     parser.add_argument("--rcrl", action="store_true", default=False)
     parser.add_argument("--dist_param", default=1.0, type=float) # when calculating possibility of collision, uses exp(-alpha * k)
-    parser.add_argument("--env_name", required=False, default='Duckietown-loop_pedestrians-v0', type=str)
+    parser.add_argument("--env_name", required=False, default=None, type=str) # 'Duckietown-loop_pedestrians-v0'
     parser.add_argument("--new_size", required=False, default=(64, 64, 3), type=tuple) # default is (120, 160, 3)
     
     return parser.parse_args()

@@ -134,13 +134,16 @@ def train(args):
                         obj.proximity(env.cur_pos, AGENT_SAFETY_RAD * AGENT_SAFETY_GAIN, true_safety_dist=True)
                     )
                     obj_distances.append(obj_safe_dist)
-            min_dist = min(obj_distances)
-            # reduce variance by using exponential decay
-            exp_neg_min_dist = np.exp(-args.dist_param * min_dist)
+            try:
+                min_dist = min(obj_distances)
+                # reduce variance by using exponential decay
+                exp_neg_min_dist = np.exp(-args.dist_param * min_dist)
+            except ValueError:
+                exp_neg_min_dist = 0
 
         # Perform action
         new_obs, reward, done, _ = env.step(action)
-        if action[0] < 0.001:   #Penalise slow actions: helps the bot to figure out that going straight > turning in circles
+        if action[0] < 0.001:   # TODO: maybe have to increase this value to 0.01 or 0.1
             reward = 0
 
         if episode_timesteps >= args.env_timesteps:

@@ -57,5 +57,5 @@ if __name__ == "__main__":
     parser.add_argument("--lr_critic", default=1e-3, type=float) # learning rate of critic (only for RCRL)
     parser.add_argument("--lr_prior", default=1e-4, type=float) # learning rate of prior (only for RCRL)
     parser.add_argument("--folder_hash", required=True, type=str)
-    parser.add_argument("--env_name", required=False, default='Duckietown-loop_pedestrians-v0', type=str)
+    parser.add_argument("--env_name", required=False, default=None, type=str) # 'Duckietown-loop_pedestrians-v0'
     _enjoy(parser.parse_args())

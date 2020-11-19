@@ -271,6 +271,8 @@ class RCRL(object):
         print("Saved Actor")
         torch.save(self.critic.state_dict(), "{}/{}_critic.pth".format(directory, filename))
         print("Saved Critic")
+        torch.save(self.prior_regressor.state_dict(), "{}/{}_prior.pth".format(directory, filename))
+        print("Saved Prior")
 
     def load(self, filename, directory):
         self.actor.load_state_dict(
