@@ -2,7 +2,7 @@ import argparse
 import sys
 
 
-def get_ddpg_args_train():
+def get_args_train():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", default=200, type=int)  # Sets Gym, PyTorch and Numpy seeds
     parser.add_argument("--start_timesteps", default=1e4, type=int)  # How many time steps purely random policy is run for
@@ -18,12 +18,20 @@ def get_ddpg_args_train():
     parser.add_argument("--policy_freq", default=2, type=int)  # Frequency of delayed policy updates
     parser.add_argument("--env_timesteps", default=500, type=int)  # Frequency of delayed policy updates
     parser.add_argument("--replay_buffer_max_size", default=10000, type=int)  # Maximum number of steps to keep in the replay buffer
-    parser.add_argument("--log_file", default=None, type=str)  # Maximum number of steps to keep in the replay buffer
 
+    # RCRL Args
+    parser.add_argument("--lr_actor", default=1e-4, type=float) # learning rate of actor (only for RCRL)
+    parser.add_argument("--lr_critic", default=1e-3, type=float) # learning rate of critic (only for RCRL)
+    parser.add_argument("--lr_prior", default=1e-4, type=float) # learning rate of prior (only for RCRL)
+    parser.add_argument("--model-dir", type=str, default="pytorch_models")
+    parser.add_argument("--rcrl", action="store_true", default=False)
+    parser.add_argument("--dist_param", default=1.0, type=float) # when calculating possibility of collision, uses exp(-alpha * k)
+    parser.add_argument("--env_name", required=False, default='Duckietown-loop_pedestrians-v0', type=str)
+    parser.add_argument("--new_size", required=False, default=(64, 64, 3), type=tuple) # default is (120, 160, 3)
+    
     return parser.parse_args()
 
-
-def get_ddpg_args_test():
+def get_args_test():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", default=123, type=int)  # Inform the test what seed was used in training
     parser.add_argument("--experiment", default=2, type=int)
