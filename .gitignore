@@ -113,3 +113,5 @@ src/*
 
 log.txt
 requirements.resolved
+
+.vscode
