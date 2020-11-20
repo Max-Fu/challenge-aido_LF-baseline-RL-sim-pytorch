@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from args import get_ddpg_args_test
+from args import get_args_test
 
 from ddpg import DDPG
 from env import launch_env

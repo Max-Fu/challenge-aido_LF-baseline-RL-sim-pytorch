@@ -28,7 +28,7 @@ def _enjoy(args):
 
     # Initialize policy
     if args.rcrl:
-        policy = RCRL(state_dim, action_dim, max_action, prior_dim=1, lr_actor=args.lr_actor, lr_critic=args.lr_critic, lr_prior=args.lr_prior)
+        policy = RCRL(state_dim, action_dim, max_action, prior_dim=args.prior_dim, lr_actor=args.lr_actor, lr_critic=args.lr_critic, lr_prior=args.lr_prior)
     else:
         policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
     if args.rcrl: 
@@ -59,4 +59,5 @@ if __name__ == "__main__":
     parser.add_argument("--lr_prior", default=1e-4, type=float) # learning rate of prior (only for RCRL)
     parser.add_argument("--folder_hash", required=True, type=str)
     parser.add_argument("--env_name", required=False, default=None, type=str) # 'Duckietown-loop_pedestrians-v0'
+    parser.add_argument("--prior_dim", required=False, default=2, type=int)    
     _enjoy(parser.parse_args())
