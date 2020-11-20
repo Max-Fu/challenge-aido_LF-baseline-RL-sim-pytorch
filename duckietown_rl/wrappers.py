@@ -56,11 +56,13 @@ class DtRewardWrapper(gym.RewardWrapper):
         if reward == -1000:
             reward = -10
         elif reward > 0:
-            reward += 10
+            # reward += 10
+            reward += 2 
         else:
-            reward += 4
+            reward += 1
 
         return reward
+    # now in upper directory wrappers (not used)
 
 
 # this is needed because at max speed the duckie can't turn anymore

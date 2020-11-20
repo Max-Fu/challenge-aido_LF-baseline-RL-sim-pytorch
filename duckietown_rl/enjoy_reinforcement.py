@@ -45,6 +45,7 @@ def _enjoy(args):
             action = policy.predict(np.array(obs))
             # Perform action
             obs, reward, done, _ = env.step(action)
+            print(action, reward)
             env.render()
         done = False
         obs = env.reset()

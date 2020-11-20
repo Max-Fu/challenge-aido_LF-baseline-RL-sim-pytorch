@@ -55,7 +55,7 @@ def train(args):
 
     # Initialize policy
     if args.rcrl:
-        policy = RCRL(state_dim, action_dim, max_action, prior_dim=1, lr_actor=args.lr_actor, lr_critic=args.lr_critic, lr_prior=args.lr_prior)
+        policy = RCRL(state_dim, action_dim, max_action, prior_dim=args.prior_dim, lr_actor=args.lr_actor, lr_critic=args.lr_critic, lr_prior=args.lr_prior)
     else: 
         policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
 
@@ -140,7 +140,12 @@ def train(args):
                 exp_neg_min_dist = np.exp(-args.dist_param * min_dist)
             except ValueError:
                 exp_neg_min_dist = 0
-
+            
+            if args.prior_dim == 2:
+                lane_dist = np.abs(env.get_lane_pos2(env.cur_pos, action[1]).dist)
+                sample_prior = [exp_neg_min_dist, lane_dist]
+            else:
+                sample_prior = exp_neg_min_dist
         # Perform action
         new_obs, reward, done, _ = env.step(action)
         if action[0] < 0.001:   # TODO: maybe have to increase this value to 0.01 or 0.1
@@ -154,7 +159,7 @@ def train(args):
 
         if args.rcrl: 
             # Store data in replay buffer
-            replay_buffer.add(obs, new_obs, action, reward, done_bool, exp_neg_min_dist)
+            replay_buffer.add(obs, new_obs, action, reward, done_bool, sample_prior)
         else: 
             # Store data in replay buffer
             replay_buffer.add(obs, new_obs, action, reward, done_bool)
