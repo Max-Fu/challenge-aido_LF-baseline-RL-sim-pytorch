@@ -281,3 +281,6 @@ class RCRL(object):
         self.critic.load_state_dict(
             torch.load("{}/{}_critic.pth".format(directory, filename), map_location=device)
         )
+        self.prior_regressor.load_state_dict(
+            torch.load("{}/{}_prior.pth".format(directory, filename), map_location=device)
+        )
