@@ -18,7 +18,7 @@ def get_args_train():
     parser.add_argument("--policy_freq", default=2, type=int)  # Frequency of delayed policy updates
     parser.add_argument("--env_timesteps", default=500, type=int)  # Frequency of delayed policy updates
     parser.add_argument("--replay_buffer_max_size", default=10000, type=int)  # Maximum number of steps to keep in the replay buffer
-
+    parser.add_argument("--sac", default=False, action="store_true")
     # RCRL Args
     parser.add_argument("--lr_actor", default=1e-4, type=float) # learning rate of actor (only for RCRL)
     parser.add_argument("--lr_critic", default=1e-3, type=float) # learning rate of critic (only for RCRL)

@@ -10,6 +10,8 @@ import os
 from args import get_args_train
 from ddpg import DDPG
 from rcrl import RCRL
+from sac import SAC
+from sac_rcrl import SACRCRL
 from utils import seed, evaluate_policy, ReplayBuffer
 from wrappers import NormalizeWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper, SteeringToWheelVelWrapper
@@ -26,8 +28,12 @@ FOLLOWING_DISTANCE = 0.24
 AGENT_SAFETY_GAIN = 1.15
 
 def train(args):
-    if args.rcrl:
+    if args.rcrl and args.sac:
+        policy_name = "SAC-RCRL"
+    elif args.rcrl:
         policy_name = "RCRL"
+    elif args.sac:
+        policy_name = "SAC"
     else:
         policy_name = "DDPG"
 
@@ -54,8 +60,12 @@ def train(args):
 
 
     # Initialize policy
-    if args.rcrl:
+    if args.rcrl and args.sac:
+        policy = SACRCRL(state_dim, action_dim, max_action, prior_dim=args.prior_dim, lr_actor=args.lr_actor, lr_critic=args.lr_critic, lr_prior=args.lr_prior)
+    elif args.rcrl:
         policy = RCRL(state_dim, action_dim, max_action, prior_dim=args.prior_dim, lr_actor=args.lr_actor, lr_critic=args.lr_critic, lr_prior=args.lr_prior)
+    elif args.sac:
+        policy = SAC(state_dim, action_dim, max_action)
     else: 
         policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
 
