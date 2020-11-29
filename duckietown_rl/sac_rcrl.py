@@ -6,6 +6,7 @@ import torch.optim as optim
 from torch.distributions import Normal
 import numpy as np
 import collections, random
+from utils import normalize, unnormalize, to_numpy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -84,7 +85,7 @@ class ActorCNN(nn.Module):
         action[:, 0] = self.max_action * self.sigm(action[:, 0])  # because we don't want the duckie to go backwards
         action[:, 1] = self.tanh(action[:, 1])
 
-        action[torch.isnan(action)] = 0
+        # action[torch.isnan(action)] = self.max_action
 
         real_log_prob = log_prob - torch.log(1-torch.tanh(action).pow(2) + 1e-7)
         return action, real_log_prob
@@ -101,11 +102,13 @@ class ActorCNN(nn.Module):
         loss = -min_q - entropy # for gradient ascent
         self.optimizer.zero_grad()
         loss.mean().backward()
+        nn.utils.clip_grad_norm_(self.parameters(), 1.0)
         self.optimizer.step()
 
-        self.log_alpha_optimizer.zero_grad()
         alpha_loss = -(self.log_alpha.exp() * (log_prob + target_entropy).detach()).mean()
+        self.log_alpha_optimizer.zero_grad()
         alpha_loss.backward()
+        nn.utils.clip_grad_norm_(self.parameters(), 1.0)
         self.log_alpha_optimizer.step()
         
         return loss.mean(), alpha_loss
@@ -159,6 +162,7 @@ class CriticCNN(nn.Module):
         loss = F.smooth_l1_loss(self.forward(s, a) , target)
         self.optimizer.zero_grad()
         loss.mean().backward()
+        nn.utils.clip_grad_norm_(self.parameters(), 1.0)
         self.optimizer.step()
         return loss.mean()
     
@@ -220,6 +224,7 @@ class PriorCNN(nn.Module):
        
         self.prior_optimizer.zero_grad()
         prior_loss.backward()
+        nn.utils.clip_grad_norm_(self.parameters(), 1.0)
         self.prior_optimizer.step()
         return prior_loss
 
@@ -228,7 +233,7 @@ def calc_target(pi, q1, q2, mini_batch):
 
     with torch.no_grad():
         a_prime, log_prob = pi(s_prime, prior)
-        entropy = -pi.log_alpha.exp() * log_prob
+        entropy = torch.mean(-pi.log_alpha.exp() * log_prob)
         q1_val, q2_val = q1(s_prime,a_prime), q2(s_prime,a_prime)
         q1_q2 = torch.cat([q1_val, q2_val], dim=1)
         min_q = torch.min(q1_q2, 1, keepdim=True)[0]
@@ -237,7 +242,7 @@ def calc_target(pi, q1, q2, mini_batch):
     return target
 
 class SACRCRL(object):
-    def __init__(self, state_dim, action_dim, max_action, prior_dim, lr_actor=1e-4, lr_critic=1e-3, lr_prior=1e-4):
+    def __init__(self, state_dim, action_dim, max_action, prior_dim, lr_actor=1e-4, lr_critic=1e-3, lr_prior=1e-4, normalize_rew=True):
         super(SACRCRL, self).__init__()
         self.state_dim = state_dim
         self.prior_dim = prior_dim 
@@ -255,6 +260,7 @@ class SACRCRL(object):
         self.critic_2_target.load_state_dict(self.critic_2.state_dict())
 
         self.prior_regressor = PriorCNN(prior_dim, lr_prior, output_activation='sigmoid').to(device)
+        self.normalize_rew = normalize_rew
 
     def predict(self, state):
         # just making sure the state has the correct format, otherwise the prediction doesn't work
@@ -266,9 +272,13 @@ class SACRCRL(object):
             state = torch.FloatTensor(np.expand_dims(state, axis=0)).to(device)
 
         state = state.detach()
-        prior_prediction = self.prior_regressor(state)
-        action = self.actor(state, prior_prediction)[0].cpu().data.numpy().flatten()
-
+        self.actor.eval()
+        self.prior_regressor.eval()
+        with torch.no_grad():
+            prior_prediction = self.prior_regressor(state)
+            action = to_numpy(self.actor(state, prior_prediction)[0]).flatten()
+        self.actor.train()
+        self.prior_regressor.train()
         return action
 
     def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001):
@@ -291,6 +301,11 @@ class SACRCRL(object):
             prior_t = torch.FloatTensor(sample["additional"]).to(device)
             prior_t = torch.reshape(prior_t, (-1, self.prior_dim))
 
+            if self.normalize_rew:
+                past_k_rewards = replay_buffer.get_reward()
+                reward_mean, reward_std = np.mean(past_k_rewards), np.std(past_k_rewards)
+                reward = normalize(reward, reward_mean, reward_std)
+
             # recombine into a minibatch 
             mini_batch = (state, action, reward, next_state, done, prior_t)
 
@@ -312,11 +327,11 @@ class SACRCRL(object):
             self.critic_2.soft_update(self.critic_2_target)
 
             # summarize losses
-            total_prior_loss += prior_loss.detach().cpu().numpy()
-            total_critic_1_loss += critic_loss_1.detach().cpu().numpy()
-            total_critic_2_loss += critic_loss_2.detach().cpu().numpy()
-            total_actor_loss += actor_loss.detach().cpu().numpy()
-            total_alpha_loss += alpha_loss.detach().cpu().numpy()
+            total_prior_loss += to_numpy(prior_loss)
+            total_critic_1_loss += to_numpy(critic_loss_1)
+            total_critic_2_loss += to_numpy(critic_loss_2)
+            total_actor_loss += to_numpy(actor_loss)
+            total_alpha_loss += to_numpy(alpha_loss)
 
         return {
             "prior_loss": total_prior_loss / iterations,

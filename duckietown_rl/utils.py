@@ -20,18 +20,28 @@ class ReplayBuffer(object):
         self.storage = []
         self.max_size = max_size
         self.additional = additional 
+        self.rew = []
 
     def __len__(self):
         return len(self.storage)
+
+    def get_reward(self, up_to=5000): # was 1000
+        if len(self.rew):
+            return np.array(self.rew[:min(len(self), up_to)])
+        return np.array([0])
 
     # Expects tuples of (state, next_state, action, reward, done)
     def add(self, state, next_state, action, reward, done, additional=None):
         if len(self.storage) < self.max_size:
             self.storage.append((state, next_state, action, reward, done, additional))
+            self.rew.append(reward)
         else:
             # Remove random element in the memory beforea adding a new one
-            self.storage.pop(random.randrange(len(self.storage)))
+            idx = random.randrange(len(self.storage))
+            self.storage.pop(idx)
             self.storage.append((state, next_state, action, reward, done, additional))
+            self.rew.pop(idx)
+            self.rew.append(reward)
 
     def sample(self, batch_size=100, flat=True):
         ind = np.random.randint(0, len(self.storage), size=batch_size)
@@ -84,3 +94,12 @@ def evaluate_policy(env, policy, eval_episodes=10, max_timesteps=500):
     avg_reward /= eval_episodes
 
     return avg_reward
+
+def normalize(data, mean, std, eps=1e-8):
+    return (data-mean)/(std+eps)
+
+def unnormalize(data, mean, std):
+    return data*std+mean
+
+def to_numpy(tensor):
+    return tensor.to('cpu').detach().numpy()

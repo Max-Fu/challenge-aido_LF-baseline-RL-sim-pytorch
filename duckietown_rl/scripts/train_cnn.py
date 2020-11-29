@@ -57,7 +57,7 @@ def train(args):
     state_dim = env.observation_space.shape
     action_dim = env.action_space.shape[0]
     max_action = float(env.action_space.high[0])
-
+    print("reward normalization: ", args.normalize_rew)
 
     # Initialize policy
     if args.rcrl and args.sac:
@@ -65,7 +65,7 @@ def train(args):
     elif args.rcrl:
         policy = RCRL(state_dim, action_dim, max_action, prior_dim=args.prior_dim, lr_actor=args.lr_actor, lr_critic=args.lr_critic, lr_prior=args.lr_prior)
     elif args.sac:
-        policy = SAC(state_dim, action_dim, max_action)
+        policy = SAC(state_dim, action_dim, max_action, learning_rate=args.lr_actor, normalize_rew=args.normalize_rew)
     else: 
         policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
 
@@ -124,17 +124,18 @@ def train(args):
             episode_num += 1
 
         # Select action randomly or according to policy
-        if total_timesteps < args.start_timesteps:
-            action = env.action_space.sample()
-        else:
-            action = policy.predict(np.array(obs))
-            if args.expl_noise != 0:
-                action = (action + np.random.normal(
-                    0,
-                    args.expl_noise,
-                    size=env.action_space.shape[0])
-                        ).clip(env.action_space.low, env.action_space.high)
-
+        # if total_timesteps < args.start_timesteps:
+        #     action = env.action_space.sample()
+        # else:
+        #     action = policy.predict(np.array(obs))
+        #     if args.expl_noise != 0:
+        #         action = (action + np.random.normal(
+        #             0,
+        #             args.expl_noise,
+        #             size=env.action_space.shape[0])
+        #                 ).clip(env.action_space.low, env.action_space.high)
+        action = policy.predict(np.array(obs))
+        
         if args.rcrl: 
             current_world_objects = env.objects
             obj_distances = []
@@ -157,7 +158,13 @@ def train(args):
             else:
                 sample_prior = exp_neg_min_dist
         # Perform action
-        new_obs, reward, done, _ = env.step(action)
+        try:
+            new_obs, reward, done, _ = env.step(action)
+        except (ValueError, AssertionError):
+            print("action invalid: ")
+            print(action)
+            import pdb; pdb.set_trace()
+
         # if action[0] < 0.001:   # TODO: maybe have to increase this value to 0.01 or 0.1
         #     reward = 0
 
