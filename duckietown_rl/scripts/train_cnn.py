@@ -127,15 +127,15 @@ def train(args):
         # if total_timesteps < args.start_timesteps:
         #     action = env.action_space.sample()
         # else:
-        #     action = policy.predict(np.array(obs))
-        #     if args.expl_noise != 0:
-        #         action = (action + np.random.normal(
-        #             0,
-        #             args.expl_noise,
-        #             size=env.action_space.shape[0])
-        #                 ).clip(env.action_space.low, env.action_space.high)
         action = policy.predict(np.array(obs))
-        
+        if args.expl_noise != 0:
+            action = (action + np.random.normal(
+                0,
+                args.expl_noise,
+                size=env.action_space.shape[0])
+                    ).clip(env.action_space.low, env.action_space.high)
+        # action = policy.predict(np.array(obs))
+
         if args.rcrl: 
             current_world_objects = env.objects
             obj_distances = []

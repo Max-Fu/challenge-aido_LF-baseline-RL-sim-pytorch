@@ -31,7 +31,7 @@ class NormalizeWrapper(gym.ObservationWrapper):
         if self.obs_lo == 0.0 and self.obs_hi == 1.0:
             return obs
         else:
-            return (obs - self.obs_lo) / (self.obs_hi - self.obs_lo)
+            return (obs - self.obs_lo) / (self.obs_hi - self.obs_lo + 1e-7)
 
 
 class ImgWrapper(gym.ObservationWrapper):
@@ -55,8 +55,10 @@ class DtRewardWrapper(gym.RewardWrapper):
     def reward(self, reward):
         if reward == -1000:
             reward = -50
-        elif reward > 0.1:
-            reward += 1
+        elif reward > 1:
+            reward += 2
+        elif reward > 0:
+            reward += 0.5
         return reward
 
 
@@ -66,7 +68,7 @@ class ActionWrapper(gym.ActionWrapper):
         gym.ActionWrapper.__init__(self, env)
 
     def action(self, action):
-        action_ = [action[0]*0.8, action[1]]
+        action_ = [action[0], action[1]]
         return action_
 
 

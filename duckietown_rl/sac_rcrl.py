@@ -93,19 +93,25 @@ class ActorCNN(nn.Module):
     def train_net(self, q1, q2, mini_batch):
         s, a, r, s_prime, done, prior = mini_batch
         a_prime, log_prob = self.forward(s_prime, prior)
-        entropy = -self.log_alpha.exp() * log_prob
+        entropy = torch.mean(-self.log_alpha.detach().exp() * log_prob) 
 
         q1_val, q2_val = q1(s,a_prime), q2(s,a_prime)
         q1_q2 = torch.cat([q1_val, q2_val], dim=1)
         min_q = torch.min(q1_q2, 1, keepdim=True)[0]
 
         loss = -min_q - entropy # for gradient ascent
+        if torch.isnan(loss).any():
+            print("NaN error! Skipped Actor")
+            return torch.zeros(1), torch.zeros(1)
         self.optimizer.zero_grad()
         loss.mean().backward()
         nn.utils.clip_grad_norm_(self.parameters(), 1.0)
         self.optimizer.step()
 
-        alpha_loss = -(self.log_alpha.exp() * (log_prob + target_entropy).detach()).mean()
+        alpha_loss = -(self.log_alpha * (log_prob + target_entropy).detach()).mean()
+        if torch.isnan(loss).any():
+            print("NaN error! Skipped alpha loss")
+            return loss.mean(), torch.zeros(1)
         self.log_alpha_optimizer.zero_grad()
         alpha_loss.backward()
         nn.utils.clip_grad_norm_(self.parameters(), 1.0)
@@ -161,6 +167,9 @@ class CriticCNN(nn.Module):
         s, a, r, s_prime, done, prior = mini_batch
         loss = F.smooth_l1_loss(self.forward(s, a) , target)
         self.optimizer.zero_grad()
+        if torch.isnan(loss).any():
+            print("NaN error! Skipped Critic")
+            return torch.zeros(1)
         loss.mean().backward()
         nn.utils.clip_grad_norm_(self.parameters(), 1.0)
         self.optimizer.step()
@@ -233,7 +242,7 @@ def calc_target(pi, q1, q2, mini_batch):
 
     with torch.no_grad():
         a_prime, log_prob = pi(s_prime, prior)
-        entropy = torch.mean(-pi.log_alpha.exp() * log_prob)
+        entropy = torch.mean(-pi.log_alpha.detach().exp() * log_prob)
         q1_val, q2_val = q1(s_prime,a_prime), q2(s_prime,a_prime)
         q1_q2 = torch.cat([q1_val, q2_val], dim=1)
         min_q = torch.min(q1_q2, 1, keepdim=True)[0]

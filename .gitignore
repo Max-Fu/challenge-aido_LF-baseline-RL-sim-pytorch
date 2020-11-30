@@ -117,3 +117,4 @@ requirements.resolved
 .vscode
 pytorch_models
 results
+log
