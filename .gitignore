@@ -117,4 +117,6 @@ requirements.resolved
 .vscode
 pytorch_models
 results
+logs
 log
+*.zip
