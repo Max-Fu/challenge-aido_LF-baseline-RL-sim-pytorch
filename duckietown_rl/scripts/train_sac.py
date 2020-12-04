@@ -30,14 +30,14 @@ def get_args():
     parser.add_argument('--n-step', type=int, default=2)
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--step-per-epoch', type=int, default=10000)
-    parser.add_argument('--collect-per-step', type=int, default=4)
+    parser.add_argument('--collect-per-step', type=int, default=1)
     parser.add_argument('--update-per-step', type=int, default=1)
     parser.add_argument('--pre-collect-step', type=int, default=10000)
     parser.add_argument('--batch-size', type=int, default=256)
     parser.add_argument('--hidden-layer-size', type=int, default=256)
     parser.add_argument('--layer-num', type=int, default=1)
     parser.add_argument('--training-num', type=int, default=16)
-    parser.add_argument('--test-num', type=int, default=100)
+    parser.add_argument('--test-num', type=int, default=1)
     parser.add_argument('--logdir', type=str, default='log')
     parser.add_argument('--render', type=float, default=0.)
     parser.add_argument('--log-interval', type=int, default=1000)
@@ -59,10 +59,12 @@ def test_sac(args=get_args()):
     print("Actions shape:", args.action_shape)
     print("Action range:", np.min(env.action_space.low),
           np.max(env.action_space.high))
-    train_envs = launch_env(args.task)
+    # train_envs = launch_env(args.task)
+    train_envs = env
     # train_envs = SubprocVectorEnv(
     #     [lambda: launch_env(args.task) for _ in range(args.training_num)])
-    test_envs = launch_env(args.task)
+    # test_envs = launch_env(args.task)
+    test_envs = env
     # test_envs = SubprocVectorEnv(
     #     [lambda: launch_env(args.task) for _ in range(args.test_num)])
     # seed
@@ -113,7 +115,7 @@ def test_sac(args=get_args()):
 
     # collector
     train_collector = Collector(
-        policy, train_envs, ReplayBuffer(args.buffer_size))
+        policy, train_envs, ReplayBuffer(args.buffer_size, ignore_obs_next=True))
     test_collector = Collector(policy, test_envs)
     # log
     if args.task == None:
