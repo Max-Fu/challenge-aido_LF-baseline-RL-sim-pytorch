@@ -233,18 +233,6 @@ class RCRLSAC(SAC):
             reset_num_timesteps=reset_num_timesteps,
         )
 
-    def _excluded_save_params(self) -> List[str]:
-        return super(RCRLSAC, self)._excluded_save_params() + ["actor", "critic", "critic_target"]
-
-    def _get_torch_save_params(self) -> Tuple[List[str], List[str]]:
-        state_dicts = ["policy", "actor.optimizer", "critic.optimizer"]
-        saved_pytorch_variables = ["log_ent_coef"]
-        if self.ent_coef_optimizer is not None:
-            state_dicts.append("ent_coef_optimizer")
-        else:
-            saved_pytorch_variables.append("ent_coef_tensor")
-        return state_dicts, saved_pytorch_variables
-
     def collect_rollouts(
         self,
         env: VecEnv,
@@ -337,7 +325,8 @@ class RCRLSAC(SAC):
             if done:
                 total_episodes += 1
                 self._episode_num += 1
-                
+                # episode_rewards.append(episode_reward)
+                # total_timesteps.append(episode_timesteps)
                 if action_noise is not None:
                     action_noise.reset()
 
@@ -347,8 +336,10 @@ class RCRLSAC(SAC):
             
         mean_reward = np.mean(episode_rewards) 
         std_reward = np.std(episode_rewards) 
+        average_steps = np.mean(total_timesteps)
         logger.record("rollout/mean_reward", mean_reward)
         logger.record("rollout/std_reward", std_reward)
+        logger.record("rollout/avg_len", average_steps)
 
         callback.on_rollout_end()
 
@@ -363,3 +354,15 @@ class RCRLSAC(SAC):
             optimize_memory_usage=self.optimize_memory_usage,
             prior_dim=self.prior_dim,
         )
+
+    def _excluded_save_params(self) -> List[str]:
+        return super(RCRLSAC, self)._excluded_save_params() + ["actor", "critic", "critic_target", "prior_network"]
+
+    def _get_torch_save_params(self) -> Tuple[List[str], List[str]]:
+        state_dicts = ["policy", "actor.optimizer", "critic.optimizer", "prior_network.optimizer"]
+        saved_pytorch_variables = ["log_ent_coef"]
+        if self.ent_coef_optimizer is not None:
+            state_dicts.append("ent_coef_optimizer")
+        else:
+            saved_pytorch_variables.append("ent_coef_tensor")
+        return state_dicts, saved_pytorch_variables

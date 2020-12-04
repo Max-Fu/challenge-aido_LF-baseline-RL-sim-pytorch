@@ -147,9 +147,9 @@ class RCRLActor(Actor):
             normalize_images,
         )
         self.prior_dim = prior_dim 
-        prior_network_layers = create_mlp(features_dim, -1, net_arch, activation_fn)
+        # prior_network_layers = create_mlp(features_dim, -1, net_arch, activation_fn)
         last_layer_dim = net_arch[-1] if len(net_arch) > 0 else features_dim
-        prior_network_layers.append(nn.Linear(last_layer_dim, self.prior_dim))
+        prior_network_layers = [nn.Linear(last_layer_dim, last_layer_dim), activation_fn(), nn.Linear(last_layer_dim, self.prior_dim)]
         self.prior_network = nn.Sequential(*prior_network_layers)
         
         action_dim = get_action_dim(self.action_space)
@@ -173,8 +173,10 @@ class RCRLActor(Actor):
                 self.mu = nn.Sequential(self.mu, nn.Hardtanh(min_val=-clip_mean, max_val=clip_mean))
         else:
             self.action_dist = SquashedDiagGaussianDistribution(action_dim)
-            self.mu = nn.Linear(last_layer_dim + self.prior_dim, action_dim)
-            self.log_std = nn.Linear(last_layer_dim + self.prior_dim, action_dim)
+            mu = [nn.Linear(last_layer_dim + self.prior_dim, last_layer_dim + self.prior_dim), activation_fn(), nn.Linear(last_layer_dim + self.prior_dim, action_dim)]
+            self.mu = nn.Sequential(*mu)
+            log_std = [nn.Linear(last_layer_dim + self.prior_dim, last_layer_dim + self.prior_dim), activation_fn(), nn.Linear(last_layer_dim + self.prior_dim, action_dim)]
+            self.log_std = nn.Sequential(*log_std)
 
     def get_std(self) -> th.Tensor:
         """
@@ -212,7 +214,7 @@ class RCRLActor(Actor):
         latent_pi = self.latent_pi(features)
 
         # calculate prior and combine into latent pi
-        prior = self.prior_network(features)
+        prior = self.prior_network(latent_pi)
         # self.prior_network.out = prior
         latent_pi = th.cat([latent_pi, prior], 1)
         # TODO: need to attach a loss to this
@@ -235,5 +237,46 @@ class RCRLActor(Actor):
     def forward_prior(self, obs: th.Tensor):
         features = self.extract_features(obs)
         latent_pi = self.latent_pi(features)
-        prior = self.prior_network(features)
+        prior = self.prior_network(latent_pi)
         return prior
+
+class CnnPolicy(RCRLPolicy):
+    def __init__(
+        self,
+        observation_space: gym.spaces.Space,
+        action_space: gym.spaces.Space,
+        lr_schedule: Callable,
+        net_arch: Optional[Union[List[int], Dict[str, List[int]]]] = None,
+        activation_fn: Type[nn.Module] = nn.ReLU,
+        use_sde: bool = False,
+        log_std_init: float = -3,
+        sde_net_arch: Optional[List[int]] = None,
+        use_expln: bool = False,
+        clip_mean: float = 2.0,
+        features_extractor_class: Type[BaseFeaturesExtractor] = NatureCNN,
+        features_extractor_kwargs: Optional[Dict[str, Any]] = None,
+        normalize_images: bool = True,
+        optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
+        optimizer_kwargs: Optional[Dict[str, Any]] = None,
+        n_critics: int = 2,
+        share_features_extractor: bool = True,
+    ):
+        super(CnnPolicy, self).__init__(
+            observation_space,
+            action_space,
+            lr_schedule,
+            net_arch,
+            activation_fn,
+            use_sde,
+            log_std_init,
+            sde_net_arch,
+            use_expln,
+            clip_mean,
+            features_extractor_class,
+            features_extractor_kwargs,
+            normalize_images,
+            optimizer_class,
+            optimizer_kwargs,
+            n_critics,
+            share_features_extractor,
+        )

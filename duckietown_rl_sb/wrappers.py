@@ -54,9 +54,9 @@ class DtRewardWrapper(gym.RewardWrapper):
 
     def reward(self, reward):
         if reward == -1000:
-            reward = -50
-        elif reward > 1:
-            reward += 2
+            reward = -100
+        if reward > 1:
+            reward += 1
         elif reward > 0:
             reward += 0.5
         return reward
@@ -68,7 +68,7 @@ class ActionWrapper(gym.ActionWrapper):
         gym.ActionWrapper.__init__(self, env)
 
     def action(self, action):
-        action_ = [action[0]*0.8, action[1]]
+        action_ = [action[0], action[1]]
         return action_
 
 
@@ -88,7 +88,7 @@ class SteeringToWheelVelWrapper(gym.ActionWrapper):
                  wheel_dist=0.102
                  ):
         gym.ActionWrapper.__init__(self, env)
-        self.action_space = spaces.Box(low=0, high=1, shape=(2,), dtype=np.float32)
+        self.action_space = spaces.Box(np.array([0,-1]), np.array([1,+1]))
         # Should be adjusted so that the effective speed of the robot is 0.2 m/s
         self.gain = gain
 
